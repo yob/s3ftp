@@ -3,16 +3,23 @@
 module S3FTP
   class Driver
 
+    USER  = 0
+    PASS  = 1
+    ADMIN = 2
+
     def initialize(config, passwd)
       @config = config
       @users  = {}
       CSV.parse(passwd).map { |row|
-        @users[row[0]] = row[1]
+        @users[row[USER]] = {
+          :pass  => row[PASS],
+          :admin => row[ADMIN].to_s.upcase == "Y"
+        }
       }
     end
 
     def change_dir(user, path, &block)
-      prefix = user + path
+      prefix = scoped_path(user, path)
 
       item = Happening::S3::Bucket.new(aws_bucket, :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret, :prefix => prefix, :delimiter => "/")
       item.get do |response|
@@ -21,8 +28,7 @@ module S3FTP
     end
 
     def dir_contents(user, path, &block)
-      prefix = user + path
-      prefix += "/" unless prefix[-1,1] == "/"
+      prefix = scoped_path_with_trailing_slash(user,path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
@@ -34,11 +40,11 @@ module S3FTP
     end
 
     def authenticate(user, pass, &block)
-      yield @users[user] == pass
+      yield @users[user] && @users[user][:pass] == pass
     end
 
     def bytes(user, path, &block)
-      key = user + path
+      key = scoped_path(user, path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
@@ -48,7 +54,7 @@ module S3FTP
     end
 
     def get_file(user, path, &block)
-      key = user + path
+      key = scoped_path(user, path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response }
@@ -58,7 +64,7 @@ module S3FTP
     end
 
     def put_file(user, path, data, &block)
-      key = user + path
+      key = scoped_path(user, path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -68,7 +74,7 @@ module S3FTP
     end
 
     def delete_file(user, path, &block)
-      key = user + path
+      key = scoped_path(user, path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -78,7 +84,7 @@ module S3FTP
     end
 
     def delete_dir(user, path, &block)
-      prefix = user + path
+      prefix = scoped_path(user, path)
 
       on_error   = Proc.new {|response| yield false }
 
@@ -98,9 +104,9 @@ module S3FTP
     end
 
     def rename(user, from, to, &block)
-      source_key = user + from
+      source_key = scoped_path(user, from)
       source_obj = aws_bucket + "/" + source_key
-      dest_key   = user + to
+      dest_key   = scoped_path(user, to)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -113,7 +119,7 @@ module S3FTP
     end
 
     def make_dir(user, path, &block)
-      key = user + path + "/.dir"
+      key = scoped_path(user, path) + "/.dir"
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -123,6 +129,26 @@ module S3FTP
     end
 
     private
+
+    def admin?(user)
+      @users[user] && @users[user][:admin]
+    end
+
+    def scoped_path_with_trailing_slash(user,path)
+      path  = scoped_path(user,path)
+      path += "/" if path[-1,1] != "/"
+      path == "/" ? nil : path
+    end
+
+    def scoped_path(user,path)
+      path = "" if path == "/"
+
+      if admin?(user)
+        File.join("/", path)[1,1024]
+      else
+        File.join("/", user, path)[1,1024]
+      end
+    end
 
     def aws_bucket
       @config[:bucket]
