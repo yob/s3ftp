@@ -1,0 +1,30 @@
+#!/usr/bin/ruby
+
+# a FTP wrapper proxy to an Amazon S3 bucket. Bring legacy into the cloud.
+#
+# Usage: just run the binary. No local storage or permissions are required.
+#
+#   ftps3
+#
+# Authentication details are downloaded from the root of the S3 bucket when
+# the process boots.
+
+require 'rubygems'
+require 'bundler'
+
+Bundler.setup
+
+require 'trollop'
+require 's3ftp'
+
+# command line options parsing
+cmdopts = Trollop::options do
+  opt :config, "path to a YAML config file. If it doesn't exist it will be created", :type => :string
+end
+
+if cmdopts[:config].nil?
+  Trollop::die :config, "--config must be provided"
+end
+
+
+S3FTP::App.run_server(cmdopts[:config])
