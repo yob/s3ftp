@@ -14,7 +14,8 @@ module S3FTP
       :bucket     => "my-bucket",
       :aws_key    => "my-key",
       :aws_secret => "super-secret",
-      :daemon     => nil
+      :daemon     => nil,
+      :pid_file   => nil
     }
 
     USAGE =<<-EOS 
@@ -40,9 +41,9 @@ EOS
       pid = fork
       if pid
         ## parent: save pid of child, then exit
-        #File.open(instance.pid_file, "w") do |file|
-        #  file.puts pid
-        #end
+        if @config[:pid_file]
+          File.open(@config[:pid_file], "w") { |io| io.write pid }
+        end
         exit!
       end
     end
