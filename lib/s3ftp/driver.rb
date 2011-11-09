@@ -68,14 +68,15 @@ module S3FTP
       item.get(:retry_count => 1, :on_success => on_success, :on_error => on_error)
     end
 
-    def put_file(path, data, &block)
+    def put_file(path, tmp_path, &block)
       key = scoped_path(path)
 
+      bytes      = File.size(tmp_path)
       on_error   = Proc.new {|response| yield false }
-      on_success = Proc.new {|response| yield true  }
+      on_success = Proc.new {|response| yield bytes  }
 
       item = Happening::S3::Item.new(aws_bucket, key, :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret)
-      item.put(data, :retry_count => 0, :on_success => on_success, :on_error => on_error)
+      item.put(File.binread(tmp_path), :retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
     def delete_file(path, &block)
