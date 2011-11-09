@@ -72,10 +72,8 @@ EOS
 
       EventMachine::run do
         download_passwd_file do |passwd|
-          driver = S3FTP::Driver.new(@config, passwd)
-
           puts "Starting ftp server on 0.0.0.0:21"
-          EventMachine::start_server("0.0.0.0", 21, EM::FTPD::Server, driver)
+          EventMachine::start_server("0.0.0.0", 21, EM::FTPD::Server, S3FTP::Driver, @config, passwd)
 
           daemonise!
           change_gid

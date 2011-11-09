@@ -18,8 +18,8 @@ module S3FTP
       }
     end
 
-    def change_dir(user, path, &block)
-      prefix = scoped_path(user, path)
+    def change_dir(path, &block)
+      prefix = scoped_path(path)
 
       item = Happening::S3::Bucket.new(aws_bucket, :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret, :prefix => prefix, :delimiter => "/")
       item.get do |response|
@@ -27,8 +27,8 @@ module S3FTP
       end
     end
 
-    def dir_contents(user, path, &block)
-      prefix = scoped_path_with_trailing_slash(user,path)
+    def dir_contents(path, &block)
+      prefix = scoped_path_with_trailing_slash(path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
@@ -40,11 +40,16 @@ module S3FTP
     end
 
     def authenticate(user, pass, &block)
-      yield @users[user] && @users[user][:pass] == pass
+      if @users[user] && @users[user][:pass] == pass
+        @user = user
+        yield true
+      else
+        yield false
+      end
     end
 
-    def bytes(user, path, &block)
-      key = scoped_path(user, path)
+    def bytes(path, &block)
+      key = scoped_path(path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
@@ -53,8 +58,8 @@ module S3FTP
       item.head(:retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
-    def get_file(user, path, &block)
-      key = scoped_path(user, path)
+    def get_file(path, &block)
+      key = scoped_path(path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response }
@@ -63,8 +68,8 @@ module S3FTP
       item.get(:retry_count => 1, :on_success => on_success, :on_error => on_error)
     end
 
-    def put_file(user, path, data, &block)
-      key = scoped_path(user, path)
+    def put_file(path, data, &block)
+      key = scoped_path(path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -73,8 +78,8 @@ module S3FTP
       item.put(data, :retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
-    def delete_file(user, path, &block)
-      key = scoped_path(user, path)
+    def delete_file(path, &block)
+      key = scoped_path(path)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -83,8 +88,8 @@ module S3FTP
       item.delete(:retry_count => 1, :on_success => on_success, :on_error => on_error)
     end
 
-    def delete_dir(user, path, &block)
-      prefix = scoped_path(user, path)
+    def delete_dir(path, &block)
+      prefix = scoped_path(path)
 
       on_error   = Proc.new {|response| yield false }
 
@@ -103,10 +108,10 @@ module S3FTP
       end
     end
 
-    def rename(user, from, to, &block)
-      source_key = scoped_path(user, from)
+    def rename(from, to, &block)
+      source_key = scoped_path(from)
       source_obj = aws_bucket + "/" + source_key
-      dest_key   = scoped_path(user, to)
+      dest_key   = scoped_path(to)
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -118,8 +123,8 @@ module S3FTP
       end
     end
 
-    def make_dir(user, path, &block)
-      key = scoped_path(user, path) + "/.dir"
+    def make_dir(path, &block)
+      key = scoped_path(path) + "/.dir"
 
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
@@ -130,23 +135,23 @@ module S3FTP
 
     private
 
-    def admin?(user)
-      @users[user] && @users[user][:admin]
+    def admin?
+      @users[@user] && @users[@user][:admin]
     end
 
-    def scoped_path_with_trailing_slash(user,path)
-      path  = scoped_path(user,path)
+    def scoped_path_with_trailing_slash(path)
+      path  = scoped_path(path)
       path += "/" if path[-1,1] != "/"
       path == "/" ? nil : path
     end
 
-    def scoped_path(user,path)
+    def scoped_path(path)
       path = "" if path == "/"
 
-      if admin?(user)
+      if admin?
         File.join("/", path)[1,1024]
       else
-        File.join("/", user, path)[1,1024]
+        File.join("/", @user, path)[1,1024]
       end
     end
 
