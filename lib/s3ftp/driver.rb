@@ -1,5 +1,7 @@
 # coding: utf-8
 
+require 'tempfile'
+
 module S3FTP
   class Driver
 
@@ -61,11 +63,21 @@ module S3FTP
     def get_file(path, &block)
       key = scoped_path(path)
 
+      # open a tempfile to store the file as it's downloaded from S3.
+      # em-ftpd will close it for us
+      tmpfile = Tempfile.new("s3ftp")
+
       on_error   = Proc.new {|response| yield false }
-      on_success = Proc.new {|response| yield response.response }
+      on_success = Proc.new {|response|
+        tmpfile.flush
+        tmpfile.seek(0)
+        yield tmpfile
+      }
 
       item = Happening::S3::Item.new(aws_bucket, key, :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret)
-      item.get(:retry_count => 1, :on_success => on_success, :on_error => on_error)
+      item.get(:retry_count => 1, :on_success => on_success, :on_error => on_error).stream do |chunk|
+        tmpfile.write chunk
+      end
     end
 
     def put_file(path, tmp_path, &block)
