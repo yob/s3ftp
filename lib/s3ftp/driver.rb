@@ -16,7 +16,7 @@ module S3FTP
     def change_dir(path, &block)
       prefix = scoped_path(path)
 
-      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret, :prefix => prefix, :delimiter => "/")
+      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret, :prefix => prefix, :delimiter => "/")
       item.get do |response|
         yield contains_directory?(response.response, prefix)
       end
@@ -28,7 +28,7 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
 
-      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret, :prefix => prefix, :delimiter => "/")
+      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret, :prefix => prefix, :delimiter => "/")
       item.get do |response|
         yield parse_bucket_list(response.response)
       end
@@ -53,7 +53,7 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield response.response_header["CONTENT_LENGTH"].to_i }
 
-      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.head(:retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
@@ -71,7 +71,7 @@ module S3FTP
         yield tmpfile
       }
 
-      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.get(:retry_count => 1, :on_success => on_success, :on_error => on_error).stream do |chunk|
         tmpfile.write chunk
       end
@@ -84,7 +84,7 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield bytes  }
 
-      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.put(File.binread(tmp_path), :retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
@@ -94,7 +94,7 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
 
-      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.delete(:retry_count => 1, :on_success => on_success, :on_error => on_error)
     end
 
@@ -103,11 +103,11 @@ module S3FTP
 
       on_error   = Proc.new {|response| yield false }
 
-      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret, :prefix => prefix)
+      item = Happening::S3::Bucket.new(@aws_bucket, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret, :prefix => prefix)
       item.get(:on_error => on_error) do |response|
         keys = bucket_list_to_full_keys(response.response)
         delete_object = Proc.new { |key, iter|
-          item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+          item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
           item.delete(:retry_count => 1, :on_error => on_error) do |response|
             iter.next
           end
@@ -126,9 +126,9 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
 
-      item = Happening::S3::Item.new(@aws_bucket, dest_key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, dest_key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.put(nil, :retry_count => 1, :on_error => on_error, :headers => {"x-amz-copy-source" => source_obj}) do |response|
-        item = Happening::S3::Item.new(@aws_bucket, source_key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+        item = Happening::S3::Item.new(@aws_bucket, source_key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
         item.delete(:retry_count => 1, :on_success => on_success, :on_error => on_error)
       end
     end
@@ -139,7 +139,7 @@ module S3FTP
       on_error   = Proc.new {|response| yield false }
       on_success = Proc.new {|response| yield true  }
 
-      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :@aws_secret_access_key => @aws_secret)
+      item = Happening::S3::Item.new(@aws_bucket, key, :aws_access_key_id => @aws_key, :aws_secret_access_key => @aws_secret)
       item.put("", :retry_count => 0, :on_success => on_success, :on_error => on_error)
     end
 
