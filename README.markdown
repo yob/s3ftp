@@ -8,20 +8,27 @@ A mini-FTP server that persists all data to Amazon S3.
 
 ## Configuration
 
-1. Create a new, empty S3 bucket
-2. As root, run s3ftp --config some/path/config.yml
-3. The process will generate a default config file and exit with a usage notice
-4. edit the default config file and provide connection details for Amazon S3
-5. Upload a passwd file to your S3 bucket. It should contain a single line
+1. Upload a passwd file to your S3 bucket. It should contain a single line
    per user and be a CSV. It should look something like this
 
-  user1,password,y
-  user2,password,n
+   user1,password,y
+   user2,password,n
 
-  the third column indicatest he users administrator status. Administrators can
-  see all files. Regular users are sandboxed to their own directory.
+   the third column indicates the users administrator status. Administrators can
+   see all files. Regular users are sandboxed to their own directory.
 
-6. As root, run s3ftp --config some/path/config.yml again
+2. Create a config.rb file that looks something like this
+
+    require 's3ftp'
+
+    AWS_KEY    = 'foo'
+    AWS_SECRET = 'bar'
+    AWS_BUCKET = 'my-ftp-bucket'
+
+    driver      S3FTP::Driver
+    driver_args AWS_KEY, AWS_SECRET, AWS_BUCKET
+
+3. As root, run 'em-ftpd config.rb'
 
 ## License
 

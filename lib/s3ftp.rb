@@ -4,4 +4,3 @@ require 'csv'
 require 'nokogiri'
 
 require 's3ftp/driver'
-require 's3ftp/app'
