@@ -19,5 +19,4 @@ Gem::Specification.new do |spec|
   spec.add_dependency('em-ftpd')
   spec.add_dependency('happening')
   spec.add_dependency('nokogiri')
-  spec.add_dependency('trollop')
 end
