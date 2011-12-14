@@ -21,7 +21,10 @@ A mini-FTP server that persists all data to Amazon S3.
   the third column indicatest he users administrator status. Administrators can
   see all files. Regular users are sandboxed to their own directory.
 
-6. As root, run s3ftp --config some/path/config.yml again
+  if you enable bcrypt encryption support, you can generate the password hash by running 
+  ruby -e "require 'bcrypt' ; mypass = BCrypt::Password.create('password') ; puts mypass"
+
+6. As root if you choose a listening port less than 1024, or as any other user otherwise , run s3ftp --config some/path/config.yml again
 
 ## License
 

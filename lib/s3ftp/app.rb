@@ -2,6 +2,7 @@
 
 require 'yaml'
 require 'singleton'
+require 'bcrypt'
 
 module S3FTP
 
@@ -17,6 +18,7 @@ module S3FTP
       :daemon     => nil,
       :pid_file   => nil,
       :remote_passwd_file => "passwd",
+      :remote_passwd_use_bcrypt => false,
       :listen     => {
         :ip       => "0.0.0.0",
         :port     => 21
@@ -32,6 +34,11 @@ The passwd file should have the following format:
 username,password,admin status
 james,1234,y
 user,3456,n
+
+If you use bcrypt remote password storage, you can generate the password using this command:
+
+ruby -e "require 'bcrypt' ; mypass = BCrypt::Password.create('my password') ; puts mypass"
+
 EOS
 
     def daemonise!
@@ -148,6 +155,11 @@ EOS
       #fill the remote_password_file if not present on configfile for backward compatibilty
       unless  @config[:remote_passwd_file]
         @config[:remote_passwd_file] = "passwd"
+      end
+
+      #check if bcrypt is required
+      unless @config[:remote_passwd_use_bcrypt]
+        @config[:remote_passwd_use_bcrypt] = false
       end
       
       return @config
