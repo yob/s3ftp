@@ -12,7 +12,7 @@ module S3FTP
       @users  = {}
       CSV.parse(passwd).map { |row|
         @users[row[USER]] = {
-          :pass  => row[PASS],
+          :pass  => passwordfile_uses_bcrypt ? BCrypt::Password.new(row[PASS]) : row[PASS], 
           :admin => row[ADMIN].to_s.upcase == "Y"
         }
       }
@@ -168,6 +168,10 @@ module S3FTP
       @config[:aws_secret]
     end
 
+    def passwordfile_uses_bcrypt
+      @config[:remote_passwd_use_bcrypt]
+    end
+    
     def bucket_list_to_full_keys(xml)
       doc = Nokogiri::XML(xml)
       doc.remove_namespaces!

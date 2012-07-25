@@ -2,6 +2,7 @@
 
 require 'yaml'
 require 'singleton'
+require 'bcrypt'
 
 module S3FTP
 
@@ -15,7 +16,13 @@ module S3FTP
       :aws_key    => "my-key",
       :aws_secret => "super-secret",
       :daemon     => nil,
-      :pid_file   => nil
+      :pid_file   => nil,
+      :remote_passwd_file => "passwd",
+      :remote_passwd_use_bcrypt => false,
+      :listen     => {
+        :ip       => "0.0.0.0",
+        :port     => 21
+      }
     }
 
     USAGE =<<-EOS 
@@ -27,6 +34,11 @@ The passwd file should have the following format:
 username,password,admin status
 james,1234,y
 user,3456,n
+
+If you use bcrypt remote password storage, you can generate the password using this command:
+
+ruby -e "require 'bcrypt' ; mypass = BCrypt::Password.create('my password') ; puts mypass"
+
 EOS
 
     def daemonise!
@@ -60,7 +72,7 @@ EOS
       on_success = Proc.new { |response|
         yield response.response
       }
-      item = Happening::S3::Item.new(aws_bucket, 'passwd', :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret)
+      item = Happening::S3::Item.new(aws_bucket, @config[:remote_passwd_file], :aws_access_key_id => aws_key, :aws_secret_access_key => aws_secret)
       item.get(:on_success => on_success, :on_error => on_error)
     end
 
@@ -72,8 +84,8 @@ EOS
 
       EventMachine::run do
         download_passwd_file do |passwd|
-          puts "Starting ftp server on 0.0.0.0:21"
-          EventMachine::start_server("0.0.0.0", 21, EM::FTPD::Server, S3FTP::Driver, @config, passwd)
+          puts "Starting ftp server on "+@config[:listen][:ip]+":"+@config[:listen][:port].to_s
+          EventMachine::start_server(@config[:listen][:ip],@config[:listen][:port], EM::FTPD::Server, S3FTP::Driver, @config, passwd)
 
           daemonise!
           change_gid
@@ -132,6 +144,25 @@ EOS
         end
       end
       @config = YAML.load_file(config_path)
+
+      #fill the listen part if not present on configfile for backward compatibility
+      unless @config[:listen]
+        @config[:listen] = {}
+        @config[:listen][:ip] = "0.0.0.0"
+        @config[:listen][:port] = 21
+      end
+
+      #fill the remote_password_file if not present on configfile for backward compatibilty
+      unless  @config[:remote_passwd_file]
+        @config[:remote_passwd_file] = "passwd"
+      end
+
+      #check if bcrypt is required
+      unless @config[:remote_passwd_use_bcrypt]
+        @config[:remote_passwd_use_bcrypt] = false
+      end
+      
+      return @config
     end
 
     def gid

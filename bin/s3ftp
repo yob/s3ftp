@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
 # a FTP wrapper proxy to an Amazon S3 bucket. Bring legacy into the cloud.
 #
